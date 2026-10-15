@@ -22,7 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,7 +44,7 @@ fun DocumentsScreen() {
     val documents by repository.observeDocuments().collectAsState(emptyList())
     val scope = rememberCoroutineScope()
     val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents(),
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
         uris.forEach { uri ->
             val mimeType = context.contentResolver.getType(uri)
@@ -62,10 +61,6 @@ fun DocumentsScreen() {
         }
     }
 
-    LaunchedEffect(Unit) {
-        picker.launch("*/*")
-    }
-
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -73,8 +68,15 @@ fun DocumentsScreen() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Documents", style = MaterialTheme.typography.headlineSmall)
-            Button(onClick = { picker.launch("*/*") }) { Text("Add") }
+            Button(onClick = { picker.launch(ACCEPTED_MIME_TYPES) }) { Text("Add") }
         }
+
+        private val ACCEPTED_MIME_TYPES = arrayOf(
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "application/pdf",
+        )
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(documents, key = { it.id }) { document ->

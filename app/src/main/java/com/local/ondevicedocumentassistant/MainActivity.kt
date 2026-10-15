@@ -9,7 +9,11 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
 class MainActivity : FragmentActivity() {
@@ -66,11 +71,38 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun AppNavigation() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "home") {
-        composable("home") { PlaceholderScreen("Home") }
-        composable("documents") { DocumentsScreen() }
-        composable("chat") { PlaceholderScreen("Chat") }
-        composable("settings") { PlaceholderScreen("Settings") }
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val destinations = listOf("home", "documents", "chat", "settings")
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                destinations.forEach { destination ->
+                    NavigationBarItem(
+                        selected = currentRoute == destination,
+                        onClick = {
+                            navController.navigate(destination) {
+                                popUpTo("home") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Text(destination.replaceFirstChar(Char::uppercase)) },
+                        label = { Text(destination.replaceFirstChar(Char::uppercase)) },
+                    )
+                }
+            }
+        },
+    ) { contentPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier.padding(contentPadding),
+        ) {
+            composable("home") { PlaceholderScreen("Home") }
+            composable("documents") { DocumentsScreen() }
+            composable("chat") { PlaceholderScreen("Chat") }
+            composable("settings") { PlaceholderScreen("Settings") }
+        }
     }
 }
 
