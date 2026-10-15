@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.mlkit.text.recognition.korean)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.sqlcipher.android)
     ksp(libs.androidx.room.compiler)
     testImplementation("junit:junit:4.13.2")
 

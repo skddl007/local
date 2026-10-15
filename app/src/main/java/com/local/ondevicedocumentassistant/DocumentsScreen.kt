@@ -37,6 +37,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private val ACCEPTED_MIME_TYPES = arrayOf(
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+)
+
 @Composable
 fun DocumentsScreen() {
     val context = LocalContext.current
@@ -70,13 +77,6 @@ fun DocumentsScreen() {
             Text("Documents", style = MaterialTheme.typography.headlineSmall)
             Button(onClick = { picker.launch(ACCEPTED_MIME_TYPES) }) { Text("Add") }
         }
-
-        private val ACCEPTED_MIME_TYPES = arrayOf(
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "application/pdf",
-        )
         Spacer(modifier = Modifier.height(16.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(documents, key = { it.id }) { document ->
@@ -88,12 +88,15 @@ fun DocumentsScreen() {
 
 @Composable
 private fun DocumentRow(document: DocumentEntity, context: Context) {
+    val mimeType = context.contentResolver.getType(Uri.parse(document.fileUri))
     val bitmap by produceState<Bitmap?>(initialValue = null, document.fileUri) {
-        value = withContext(Dispatchers.IO) {
-            context.contentResolver.openInputStream(Uri.parse(document.fileUri))?.use {
-                BitmapFactory.decodeStream(it)
+        value = if (mimeType?.startsWith("image/") == true) {
+            withContext(Dispatchers.IO) {
+                context.contentResolver.openInputStream(Uri.parse(document.fileUri))?.use {
+                    BitmapFactory.decodeStream(it)
+                }
             }
-        }
+        } else null
     }
     Row(
         modifier = Modifier.fillMaxWidth(),

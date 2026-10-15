@@ -3,10 +3,13 @@ package com.local.ondevicedocumentassistant.processing
 import android.content.Context
 import android.net.Uri
 import android.app.ActivityManager
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.local.ondevicedocumentassistant.data.AppDatabase
+import kotlinx.coroutines.CancellationException
+import java.io.IOException
 
 class DocumentProcessingWorker(
     appContext: Context,
@@ -57,14 +60,33 @@ class DocumentProcessingWorker(
             chunkDao.deleteForDocument(documentId)
             documentDao.updateProcessingStatus(documentId, "FAILED", "out_of_memory")
             Result.failure(workDataOf(KEY_ERROR to "out_of_memory"))
-        } catch (error: Throwable) {
+        } catch (error: CancellationException) {
             chunkDao.deleteForDocument(documentId)
-            documentDao.updateProcessingStatus(documentId, "FAILED", error.message ?: "processing_failed")
-            Result.failure(workDataOf(KEY_ERROR to (error.message ?: "processing_failed")))
+            throw error
+        } catch (error: IOException) {
+            fail(documentId, documentDao, chunkDao, "input_unavailable", error)
+        } catch (error: IllegalArgumentException) {
+            fail(documentId, documentDao, chunkDao, "invalid_document", error)
+        } catch (error: RuntimeException) {
+            fail(documentId, documentDao, chunkDao, "processing_failed", error)
         }
     }
 
+    private suspend fun fail(
+        documentId: Long,
+        documentDao: com.local.ondevicedocumentassistant.data.DocumentDao,
+        chunkDao: com.local.ondevicedocumentassistant.data.DocumentChunkDao,
+        code: String,
+        error: Exception,
+    ): Result {
+        Log.w(TAG, "Document processing failed: ${error::class.java.simpleName}")
+        chunkDao.deleteForDocument(documentId)
+        documentDao.updateProcessingStatus(documentId, "FAILED", code)
+        return Result.failure(workDataOf(KEY_ERROR to code))
+    }
+
     companion object {
+        private const val TAG = "DocumentProcessingWorker"
         const val KEY_DOCUMENT_ID = "document_id"
         const val KEY_URI = "uri"
         const val KEY_PAGE = "page"

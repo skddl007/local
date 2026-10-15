@@ -34,4 +34,11 @@ object SecurePreferences {
         }
         preferences = encryptedPreferences
     }
+
+    fun databasePassphrase(context: Context): ByteArray {
+        initialize(context)
+        val encoded = preferences?.getString(DATABASE_PASSPHRASE, null)
+            ?: error("Database passphrase is unavailable")
+        return Base64.decode(encoded, Base64.NO_WRAP)
+    }
 }

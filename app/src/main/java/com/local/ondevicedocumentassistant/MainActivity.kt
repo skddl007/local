@@ -17,6 +17,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
@@ -27,6 +30,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
 class MainActivity : FragmentActivity() {
+    private var isUnlocked by mutableStateOf(false)
+    private var authenticationMessage by mutableStateOf<String?>(null)
+    private var backgroundedAt: Long? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -37,26 +44,60 @@ class MainActivity : FragmentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavigation()
+                    if (isUnlocked) {
+                        AppNavigation()
+                    } else {
+                        LockedScreen(authenticationMessage)
+                    }
                 }
             }
         }
 
-        showBiometricGate()
+        authenticate()
     }
 
-    private fun showBiometricGate() {
+    override fun onStart() {
+        super.onStart()
+        val backgroundedAt = backgroundedAt ?: return
+        if (System.currentTimeMillis() - backgroundedAt >= REAUTHENTICATION_TIMEOUT_MS) {
+            isUnlocked = false
+            authenticate()
+        }
+        this.backgroundedAt = null
+    }
+
+    override fun onStop() {
+        backgroundedAt = System.currentTimeMillis()
+        super.onStop()
+    }
+
+    fun authenticateForSensitiveContent(onSuccess: () -> Unit) {
+        authenticate(onSuccess)
+    }
+
+    private fun authenticate(onSuccess: () -> Unit = {}) {
         val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
             BiometricManager.Authenticators.DEVICE_CREDENTIAL
         val biometricManager = BiometricManager.from(this)
         if (biometricManager.canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            authenticationMessage = "Set up a strong biometric or device credential to unlock the app."
             return
         }
 
         val prompt = BiometricPrompt(
             this,
             ContextCompat.getMainExecutor(this),
-            object : BiometricPrompt.AuthenticationCallback() {},
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    isUnlocked = true
+                    authenticationMessage = null
+                    onSuccess()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    authenticationMessage = errString.toString()
+                }
+            },
         )
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
@@ -65,6 +106,10 @@ class MainActivity : FragmentActivity() {
                 .setAllowedAuthenticators(authenticators)
                 .build(),
         )
+    }
+
+    companion object {
+        private const val REAUTHENTICATION_TIMEOUT_MS = 5 * 60 * 1000L
     }
 }
 
@@ -100,7 +145,7 @@ private fun AppNavigation() {
         ) {
             composable("home") { PlaceholderScreen("Home") }
             composable("documents") { DocumentsScreen() }
-            composable("chat") { PlaceholderScreen("Chat") }
+            composable("chat") { ChatScreen() }
             composable("settings") { PlaceholderScreen("Settings") }
         }
     }
@@ -115,5 +160,18 @@ private fun PlaceholderScreen(name: String) {
     ) {
         Text(name, style = MaterialTheme.typography.headlineSmall)
         Text("Phase 0 foundation is ready", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun LockedScreen(message: String?) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text("Unlock required", style = MaterialTheme.typography.headlineSmall)
+        Text("Authenticate to access your on-device documents")
+        message?.let { Text(it) }
     }
 }

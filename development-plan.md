@@ -264,3 +264,4 @@ For an approximately four-week demo, implement only:
 - Phase 6: 12-16 days
 - Phase 7: 7-10 days
 - Total: approximately 55-78 days for one developer
+verify by analyse it based 
