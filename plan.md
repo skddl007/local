@@ -507,7 +507,7 @@ Page 2 text continues...
   ```kotlin
   class EmbeddingEngine(context: Context) {
       private val session: OrtSession  // loaded from assets
-
+      
       // Returns FloatArray of size 384
       suspend fun embed(text: String): FloatArray {
           val tokens = tokenize(text)          // WordPiece tokenizer
