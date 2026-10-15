@@ -1,0 +1,7 @@
+{
+    "terminal.integrated.env.linux": {
+        "ANDROID_HOME": "${env:HOME}/android-sdk",
+        "ANDROID_SDK_ROOT": "${env:HOME}/android-sdk",
+        "PATH": "${env:HOME}/android-sdk/cmdline-tools/latest/bin:${env:HOME}/android-sdk/platform-tools:${env:PATH}"
+    }
+}
